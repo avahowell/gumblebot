@@ -11,7 +11,6 @@ import (
 	"flag"
 )
 
-
 func main() {
 	var sounds_dir = flag.String("sounds", "sounds", "directory where soundboard files are located")
 	var volume = flag.Float64("volume", 0.25, "soundboard volume from 0 to 1")
@@ -26,8 +25,10 @@ func main() {
 	}
 	for _, f := range files {
 		key := f.Name()
-		value, _ := filepath.Abs(filepath.Join(*sounds_dir, key))
-		soundboard[key] = value
+		if filepath.Ext(key) == "mp3" || filepath.Ext(key) == "ogg" {
+			value, _ := filepath.Abs(filepath.Join(*sounds_dir, key))
+			soundboard[key] = value
+		}
 	}
 
 
