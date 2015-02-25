@@ -14,6 +14,7 @@ import (
 
 func main() {
 	var sounds_dir = flag.String("sounds", "sounds", "directory where soundboard files are located")
+	var volume = flag.Float64("volume", 0.25, "soundboard volume from 0 to 1")
 	var stream *gumble_ffmpeg.Stream
 	soundboard := make(map[string]string)
 
@@ -32,7 +33,7 @@ func main() {
 
 	gumbleutil.Main(func(client *gumble.Client) {
 		stream, _ = gumble_ffmpeg.New(client)
-		stream.Volume = 0.25
+		stream.Volume = float32(*volume)
 		client.Attach(gumbleutil.AutoBitrate)
 	}, gumbleutil.Listener{
 		Connect: func(e *gumble.ConnectEvent) {
