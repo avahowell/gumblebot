@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
+	"regexp"
 	"github.com/layeh/gumble/gumble_ffmpeg"
 	"github.com/layeh/gumble/gumble"
 	"github.com/layeh/gumble/gumbleutil"
@@ -29,6 +30,8 @@ const helpTemplate = `
 
 const datafile = "data"
 const UserChangeConnected = 1 << iota
+const maxthumbwidth = 200
+
 func send_usage(client *gumble.Client, soundboard map[string]string) {
 	var buffer bytes.Buffer
 
@@ -76,30 +79,42 @@ func main() {
 			if e.Sender == nil {
 				return
 			}
-			separated_commands := strings.Split(e.Message, " ")
+			imageregex, _ := regexp.Compile("(https?://.*.(?:png|jpg|jpeg))")
+			if imageregex.MatchString(e.Message) == true {
+				var thumb MumbleThumbnail
+				thumb.MaxWidth = maxthumbwidth
+				go thumb.DownloadAndPost(imageregex.FindString(e.Message), gumbleclient)
+				return
+			}
 			if e.Message == "stop" {
 				stream.Stop()
+				return
 			}
 			if e.Message == "help" {
 				go send_usage(gumbleclient, soundboard.sounds)
+				return
 			}
+			separated_commands := strings.Split(e.Message, " ")
 			if separated_commands[0] == "welcome" {
 				if len(separated_commands) == 2 {
 					soundboard.SetWelcomeSound(e.Sender.Name, separated_commands[1])
 					soundboard.SaveUsers(datafile)
 				}
+				return
 			}
 			if e.Message == "sboff" {
 				u := soundboard.Users[e.Sender.Name]
 				u.SoundboardEnabled = false
 				soundboard.Users[e.Sender.Name] = u
 				soundboard.SaveUsers(datafile)
+				return
 			}
 			if e.Message == "sbon" {
 				u := soundboard.Users[e.Sender.Name]
 				u.SoundboardEnabled = true
 				soundboard.Users[e.Sender.Name] = u
 				soundboard.SaveUsers(datafile)
+				return
 			}
 			soundboard.Play(gumbleclient, stream, e.Message)
 		},
