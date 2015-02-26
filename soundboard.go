@@ -68,6 +68,30 @@ func (s *Soundboard) UpdateUsers(client *gumble.Client) {
 		s.Users[user.Name] = SoundboardUser{false, 0.5, ""}
 	}
 }
+func (s *Soundboard) WelcomeUser(user *gumble.User, client *gumble.Client, stream *gumble_ffmpeg.Stream) {
+	if _, ok := s.Users[user.Name]; ok {
+		if len(s.Users[user.Name].WelcomeSound) > 0 {
+			vtarget := &gumble.VoiceTarget{}
+			vtarget.ID = 1
+			vtarget.AddUser(user)
+			stream.Stop()
+			client.Send(vtarget)
+			client.VoiceTarget = vtarget
+			stream.Play(s.Users[user.Name].WelcomeSound)
+		}
+	}
+}
+func (s *Soundboard) SetWelcomeSound(username string, sound string) {
+	for key, value := range s.sounds {
+		if strings.Index(key, sound) == 0 {
+			if _, ok := s.Users[username]; ok {
+				u := s.Users[username]
+				u.WelcomeSound = value
+				s.Users[username] = u
+			}
+		}
+	}
+}
 func (s *Soundboard) Play(client *gumble.Client, stream *gumble_ffmpeg.Stream, sound string)  {
 	for key, value := range s.sounds {
 		if strings.Index(key, sound) == 0 {

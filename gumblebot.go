@@ -8,6 +8,7 @@ import (
 	"github.com/layeh/gumble/gumble"
 	"github.com/layeh/gumble/gumbleutil"
 	"flag"
+	"strings"
 )
 const helpTemplate = `
 <b>Gumblebot Help</b>
@@ -22,11 +23,12 @@ const helpTemplate = `
 		</li>
         {{end}}
 		</ul>
+		<li> welcome [sound], gumblebot will welcome you with your sound of choice every time you join the server </li>
     </li>
 </ul>`
 
 const datafile = "data"
-
+const UserChangeConnected = 1 << iota
 func send_usage(client *gumble.Client, soundboard map[string]string) {
 	var buffer bytes.Buffer
 
@@ -74,11 +76,18 @@ func main() {
 			if e.Sender == nil {
 				return
 			}
+			separated_commands := strings.Split(e.Message, " ")
 			if e.Message == "stop" {
 				stream.Stop()
 			}
 			if e.Message == "help" {
 				go send_usage(gumbleclient, soundboard.sounds)
+			}
+			if separated_commands[0] == "welcome" {
+				if len(separated_commands) == 2 {
+					soundboard.SetWelcomeSound(e.Sender.Name, separated_commands[1])
+					soundboard.SaveUsers(datafile)
+				}
 			}
 			if e.Message == "sboff" {
 				u := soundboard.Users[e.Sender.Name]
@@ -97,6 +106,9 @@ func main() {
 		UserChange: func(e *gumble.UserChangeEvent) {
 			soundboard.UpdateUsers(gumbleclient)
 			soundboard.SaveUsers(datafile)
+			if e.Type.Has(UserChangeConnected) == true  {
+				soundboard.WelcomeUser(e.User, gumbleclient, stream)
+			}
 		},
 	})
 
