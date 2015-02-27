@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
-	"html/template"
 	"regexp"
 	"github.com/layeh/gumble/gumble_ffmpeg"
 	"github.com/layeh/gumble/gumble"
@@ -11,48 +9,12 @@ import (
 	"flag"
 	"strings"
 )
-const helpTemplate = `
-<b>Gumblebot Help</b>
-<ul>
-    <li>
-       Soundboard Commands:
-       <ul>
-		<b><li> sbon to enable soundboard, sboff to disable soundboard </li></b>
-		{{range $key, $value := .}}
-		<li>
-            {{$key}}
-		</li>
-        {{end}}
-		</ul>
-		<li> welcome [sound], gumblebot will welcome you with your sound of choice every time you join the server </li>
-    </li>
-</ul>`
 
 const datafile = "data"
 const UserChangeConnected = 1 << iota
 const maxthumbwidth = 200
 const image_regex = `[>]https?://.*.(png|jpg|gif|jpeg)([?\s\S]+)?[<]`
 
-func send_usage(client *gumble.Client, soundboard map[string]string) {
-	var buffer bytes.Buffer
-
-	outTemplate, err := template.New("help").Parse(helpTemplate)
-	if err != nil {
-		panic(err)
-	}
-
-	err = outTemplate.Execute(&buffer, soundboard )
-	if err != nil {
-		panic(err);
-	}
-	message := gumble.TextMessage{
-		Channels: []*gumble.Channel{
-			client.Self.Channel,
-		},
-		Message: buffer.String(),
-	}
-	client.Send(&message)
-}
 func main() {
 	var sounds_dir = flag.String("sounds", "sounds", "directory where soundboard files are located")
 	var volume = flag.Float64("volume", 0.25, "soundboard volume from 0 to 1")
@@ -97,7 +59,7 @@ func main() {
 				return
 			}
 			if e.Message == "help" {
-				go send_usage(gumbleclient, soundboard.sounds)
+				go SendUsage(gumbleclient, soundboard.sounds)
 				return
 			}
 			separated_commands := strings.Split(e.Message, " ")
