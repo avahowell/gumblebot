@@ -2,8 +2,8 @@ package main
 
 import (
 	"bytes"
-	"html/template"
 	"github.com/layeh/gumble/gumble"
+	"html/template"
 )
 
 const usageTemplate = `
@@ -31,9 +31,9 @@ func SendUsage(client *gumble.Client, soundboard map[string]string) {
 		panic(err)
 	}
 
-	err = outtemplate.Execute(&buffer, soundboard )
+	err = outtemplate.Execute(&buffer, soundboard)
 	if err != nil {
-		panic(err);
+		panic(err)
 	}
 	message := gumble.TextMessage{
 		Channels: []*gumble.Channel{

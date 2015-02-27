@@ -1,16 +1,19 @@
 package main
 
-import ( "github.com/nfnt/resize"
-		 "image"
-		 "image/jpeg"
-		 _"image/png"
-		 _"image/gif"
-		 "bytes"
-		 "net/http"
-		 "encoding/base64"
-		 "html/template"
-		 "github.com/layeh/gumble/gumble"
-		 "fmt" )
+import (
+	"bytes"
+	"encoding/base64"
+	"fmt"
+	"github.com/layeh/gumble/gumble"
+	"github.com/nfnt/resize"
+	"html/template"
+	"image"
+	_ "image/gif"
+	"image/jpeg"
+	_ "image/png"
+	"net/http"
+)
+
 const mumbleImageTemplate = `
 <a href="{{.Link}}"><img src="data:image/jpeg;base64,{{.Data}}"/></a>`
 
@@ -19,6 +22,7 @@ func orPanic(err error) {
 		panic(err)
 	}
 }
+
 type ThumbnailContext struct {
 	Data string
 	Link string
@@ -26,8 +30,8 @@ type ThumbnailContext struct {
 
 type MumbleThumbnail struct {
 	Base64Data string
-	MaxWidth uint
-	Source string
+	MaxWidth   uint
+	Source     string
 }
 
 func (m *MumbleThumbnail) Download(url string) {
@@ -54,18 +58,18 @@ func (m *MumbleThumbnail) Download(url string) {
 
 	m.Base64Data = base64.StdEncoding.EncodeToString(buf.Bytes())
 }
-func (m *MumbleThumbnail) Post (client *gumble.Client) {
+func (m *MumbleThumbnail) Post(client *gumble.Client) {
 	var buffer bytes.Buffer
 
 	outTemplate, err := template.New("img").Parse(mumbleImageTemplate)
 	orPanic(err)
 
 	fmt.Println(m.Source)
-	err = outTemplate.Execute(&buffer, ThumbnailContext{m.Base64Data, m.Source} )
+	err = outTemplate.Execute(&buffer, ThumbnailContext{m.Base64Data, m.Source})
 	orPanic(err)
 
 	message := gumble.TextMessage{
-		Channels: []*gumble.Channel {
+		Channels: []*gumble.Channel{
 			client.Self.Channel,
 		},
 		Message: buffer.String(),

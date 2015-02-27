@@ -1,16 +1,18 @@
 package main
 
 import (
-	"fmt"
-	"regexp"
-	"github.com/layeh/gumble/gumble_ffmpeg"
-	"github.com/layeh/gumble/gumble"
-	"github.com/layeh/gumble/gumbleutil"
 	"flag"
+	"fmt"
+	"github.com/layeh/gumble/gumble"
+	"github.com/layeh/gumble/gumble_ffmpeg"
+	"github.com/layeh/gumble/gumbleutil"
+	"regexp"
 	"strings"
 )
 
 const datafile = "data"
+const usersfile = "users"
+const rootuser = "fighterjet"
 const UserChangeConnected = 1 << iota
 const maxthumbwidth = 200
 const image_regex = `[>]https?://.*.(png|jpg|gif|jpeg)([?\s\S]+)?[<]`
@@ -22,10 +24,12 @@ func main() {
 
 	var soundboard Soundboard
 	var gumbleclient *gumble.Client
+	var admin MumbleAdmin
 
 	soundboard.LoadUsers(datafile)
 	soundboard.LoadSounds(*sounds_dir)
-
+	admin.LoadAdminData(usersfile)
+	admin.RegisterUser(rootuser, GumblebotAdminRoot)
 	gumbleutil.Main(func(client *gumble.Client) {
 		stream, _ = gumble_ffmpeg.New(client)
 		stream.Volume = float32(*volume)
@@ -84,16 +88,18 @@ func main() {
 				soundboard.SaveUsers(datafile)
 				return
 			}
+			if separated_commands[0] == "whois" {
+				admin.Whois(e.Sender, separated_commands[1], gumbleclient)
+			}
 			soundboard.Play(gumbleclient, stream, e.Message)
 		},
 		UserChange: func(e *gumble.UserChangeEvent) {
 			soundboard.UpdateUsers(gumbleclient)
 			soundboard.SaveUsers(datafile)
-			if e.Type.Has(UserChangeConnected) == true  {
+			if e.Type.Has(UserChangeConnected) == true {
 				soundboard.WelcomeUser(e.User, gumbleclient, stream)
 			}
 		},
 	})
 
 }
-

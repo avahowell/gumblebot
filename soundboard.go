@@ -1,28 +1,29 @@
 package main
 
 import (
-	"github.com/layeh/gumble/gumble_ffmpeg"
-	"github.com/layeh/gumble/gumble"
 	"bytes"
+	"encoding/gob"
 	"fmt"
+	"github.com/layeh/gumble/gumble"
+	"github.com/layeh/gumble/gumble_ffmpeg"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
-	"encoding/gob"
 )
 
 type SoundboardUser struct {
 	SoundboardEnabled bool
-	SoundboardVolume float64
-	WelcomeSound string
+	SoundboardVolume  float64
+	WelcomeSound      string
 }
 type Soundboard struct {
-	Users map[string]SoundboardUser
+	Users  map[string]SoundboardUser
 	sounds map[string]string
 }
+
 func (s *Soundboard) LoadSounds(path string) {
 	s.sounds = make(map[string]string)
-	files,err := ioutil.ReadDir(path)
+	files, err := ioutil.ReadDir(path)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -93,7 +94,7 @@ func (s *Soundboard) SetWelcomeSound(username string, sound string) {
 		}
 	}
 }
-func (s *Soundboard) Play(client *gumble.Client, stream *gumble_ffmpeg.Stream, sound string)  {
+func (s *Soundboard) Play(client *gumble.Client, stream *gumble_ffmpeg.Stream, sound string) {
 	for key, value := range s.sounds {
 		if strings.Index(key, sound) == 0 {
 			vtarget := &gumble.VoiceTarget{}
@@ -112,4 +113,3 @@ func (s *Soundboard) Play(client *gumble.Client, stream *gumble_ffmpeg.Stream, s
 		}
 	}
 }
-
