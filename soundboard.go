@@ -88,6 +88,7 @@ func (s *Soundboard) SetWelcomeSound(username string, sound string) {
 				u := s.Users[username]
 				u.WelcomeSound = value
 				s.Users[username] = u
+				return
 			}
 		}
 	}
@@ -107,6 +108,7 @@ func (s *Soundboard) Play(client *gumble.Client, stream *gumble_ffmpeg.Stream, s
 			client.Send(vtarget)
 			client.VoiceTarget = vtarget
 			stream.Play(value)
+			return
 		}
 	}
 }
