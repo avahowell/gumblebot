@@ -31,6 +31,7 @@ const helpTemplate = `
 const datafile = "data"
 const UserChangeConnected = 1 << iota
 const maxthumbwidth = 200
+const image_regex = `[>]https?://.*.(png|jpg|gif|jpeg)([?\s\S]+)?[<]`
 
 func send_usage(client *gumble.Client, soundboard map[string]string) {
 	var buffer bytes.Buffer
@@ -52,7 +53,6 @@ func send_usage(client *gumble.Client, soundboard map[string]string) {
 	}
 	client.Send(&message)
 }
-
 func main() {
 	var sounds_dir = flag.String("sounds", "sounds", "directory where soundboard files are located")
 	var volume = flag.Float64("volume", 0.25, "soundboard volume from 0 to 1")
@@ -79,11 +79,17 @@ func main() {
 			if e.Sender == nil {
 				return
 			}
-			imageregex, _ := regexp.Compile("(https?://.*.(?:png|jpg|jpeg))")
+			imageregex, err := regexp.Compile(image_regex)
+			if err != nil {
+				panic(err)
+			}
 			if imageregex.MatchString(e.Message) == true {
+				untrimmed := imageregex.FindString(e.Message)
+				trimmed := strings.Trim(untrimmed, ">")
+				trimmed = strings.Trim(trimmed, "<")
 				var thumb MumbleThumbnail
 				thumb.MaxWidth = maxthumbwidth
-				go thumb.DownloadAndPost(imageregex.FindString(e.Message), gumbleclient)
+				go thumb.DownloadAndPost(trimmed, gumbleclient)
 				return
 			}
 			if e.Message == "stop" {
