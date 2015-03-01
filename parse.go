@@ -38,7 +38,6 @@ type MessageParser struct {
 	Commands    map[string]*Command
 	Expressions []*Expression
 
-
 	usagetemplate *template.Template
 }
 
