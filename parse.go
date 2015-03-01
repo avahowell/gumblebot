@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"bytes"
+	"fmt"
 	"github.com/layeh/gumble/gumble"
 	"html/template"
 	"regexp"
@@ -17,7 +17,7 @@ const (
 			<li>{{$command.Value}}: {{$command.Usage}}</li>
 			{{ end }}
  		</ul>
-		<ul> Expressions 
+		<ul> Active Expressions
 			{{ range .Expressions }} 
 			<li> {{.Description}} </li>
 			{{ end }}
@@ -38,7 +38,6 @@ type Command struct {
 type MessageParser struct {
 	Commands    map[string]*Command
 	Expressions []*Expression
-
 
 	usagetemplate *template.Template
 }
@@ -97,4 +96,22 @@ func (m *MessageParser) Parse(message string, sender *gumble.User) {
 			command.Action(argv[1:len(argv)], sender)
 		}
 	}
+}
+func SendMumbleMessage(message string, client *gumble.Client, channel *gumble.Channel) {
+	textmessage := gumble.TextMessage{
+		Channels: []*gumble.Channel{
+			channel,
+		},
+		Message: message,
+	}
+	client.Send(&textmessage)
+}
+func SendMumbleMessageTo(user *gumble.User, message string, client *gumble.Client) {
+	textmessage := gumble.TextMessage{
+		Users: []*gumble.User{
+			user,
+		},
+		Message: message,
+	}
+	client.Send(&textmessage)
 }

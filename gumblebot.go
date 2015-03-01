@@ -29,7 +29,7 @@ func main() {
 	soundboard.LoadUsers(datafile)
 	soundboard.LoadSounds(*sounds_dir)
 	admin.LoadAdminData(usersfile)
-	admin.RegisterUser(rootuser, GumblebotAdminRoot)
+	admin.RegisterUser(rootuser, GumblebotRoot)
 	var parser MessageParser
 	parser.New()
 
@@ -56,13 +56,13 @@ func main() {
 				soundboard.SetWelcomeSound(sender.Name, args[0])
 				soundboard.SaveUsers(datafile)
 			})
-		parser.RegisterCommand("sbon", "turns soundboard on",
+		parser.RegisterCommand("sbon", "opt-in to soundboard",
 			func(args []string, sender *gumble.User) {
 				u := soundboard.Users[sender.Name]
 				u.SoundboardEnabled = true
 				soundboard.Users[sender.Name] = u
 			})
-		parser.RegisterCommand("sboff", "turns soundboard off",
+		parser.RegisterCommand("sboff", "opt-out to soundboard",
 			func(args []string, sender *gumble.User) {
 				u := soundboard.Users[sender.Name]
 				u.SoundboardEnabled = false
@@ -71,6 +71,53 @@ func main() {
 		parser.RegisterCommand("whois", "prints admin information about user",
 			func(args []string, sender *gumble.User) {
 				admin.Whois(sender, args[0], client)
+			})
+		parser.RegisterCommand("poke", "pokes a user",
+			func(args []string, sender *gumble.User) {
+				if len(args) < 1 {
+					SendMumbleMessage(parser.Commands["poke"].Usage, client, client.Self.Channel)
+					return
+				}
+				pokestring := fmt.Sprintf("%s poked you!", sender.Name)
+				targetuser := search_mumble_users_substring(args[0], client)
+				if targetuser != nil {
+					SendMumbleMessageTo(targetuser, pokestring, client)
+				} else {
+					notfound := fmt.Sprintf("%s not found!", args[0])
+					SendMumbleMessage(notfound, client, client.Self.Channel)
+				}
+			})
+		parser.RegisterCommand("sbusers", "prints soundboard users",
+			func(args []string, sender *gumble.User) {
+				// TODO
+			})
+		parser.RegisterCommand("register", "register [user] [(user, moderator, root)] registers a user as one of the followingL user, moderator, root",
+			func(args []string, sender *gumble.User) {
+				if sender_admin, ok := admin.Users[sender.Name]; ok {
+					if sender_admin.AccessLevel >= GumblebotRoot {
+						fmt.Println(args)
+						if len(args) < 2 {
+							SendMumbleMessage(parser.Commands["register"].Usage, client, client.Self.Channel)
+							return
+						}
+						targetuser := search_mumble_users_substring(args[0], client)
+						if targetuser != nil {
+							switch args[1] {
+							case "user":
+								admin.Users[targetuser.Name] = AdminUser{targetuser.Name, GumblebotUser}
+							case "moderator":
+								admin.Users[targetuser.Name] = AdminUser{targetuser.Name, GumblebotModerator}
+							case "root":
+								admin.Users[targetuser.Name] = AdminUser{targetuser.Name, GumblebotRoot}
+							default:
+								SendMumbleMessage(parser.Commands["register"].Usage, client, client.Self.Channel)
+							}
+							admin.SaveAdminData(usersfile)
+						}
+					} else {
+						SendMumbleMessage(permissiondenied, client, client.Self.Channel)
+					}
+				}
 			})
 		parser.RegisterCommand("help", "prints usage",
 			func(args []string, sender *gumble.User) {

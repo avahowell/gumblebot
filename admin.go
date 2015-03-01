@@ -11,12 +11,13 @@ import (
 )
 
 const (
-	GumblebotAdminRoot      = 2
-	GumblebotAdminModerator = 1
-	GumblebotAdminUser      = 0
+	GumblebotRoot      = 2
+	GumblebotModerator = 1
+	GumblebotUser      = 0
 
+	permissiondenied = "I'm sorry dave, I can't do that."
 	whoistemplate = `
-		<b> Whois {{ .Name }} </b>
+		<br></br><b> Whois {{ .Name }} </b>
 		<ul>
 			<li>{{.AccessLevel}} </li>
 		<ul>`
@@ -64,7 +65,7 @@ func (m *MumbleAdmin) SaveAdminData(datapath string) {
 func (m *MumbleAdmin) RegisterUser(user string, accesslevel uint) {
 	m.Users[user] = AdminUser{UserName: user, AccessLevel: accesslevel}
 }
-func (m *MumbleAdmin) search_users_substring(target string, client *gumble.Client) *gumble.User {
+func search_mumble_users_substring(target string, client *gumble.Client) *gumble.User {
 	for _, user := range client.Users {
 		if strings.Index(user.Name, target) == 0 {
 			return user
@@ -75,8 +76,8 @@ func (m *MumbleAdmin) search_users_substring(target string, client *gumble.Clien
 
 func (m *MumbleAdmin) Whois(sender *gumble.User, targetusername string, client *gumble.Client) {
 	if user, ok := m.Users[sender.Name]; ok {
-		if user.AccessLevel >= GumblebotAdminUser {
-			targetuser := m.search_users_substring(targetusername, client)
+		if user.AccessLevel >= GumblebotUser {
+			targetuser := search_mumble_users_substring(targetusername, client)
 			if targetuser == nil {
 				// no such user, return!
 				return
@@ -84,11 +85,11 @@ func (m *MumbleAdmin) Whois(sender *gumble.User, targetusername string, client *
 			var accessLevel string
 			if targetadmin, ok := m.Users[targetuser.Name]; ok {
 				switch targetadmin.AccessLevel {
-				case GumblebotAdminRoot:
+				case GumblebotRoot:
 					accessLevel = "Root Administrator"
-				case GumblebotAdminModerator:
+				case GumblebotModerator:
 					accessLevel = "Mumble Moderator"
-				case GumblebotAdminUser:
+				case GumblebotUser:
 					accessLevel = "Mumble User"
 				}
 			} else {
