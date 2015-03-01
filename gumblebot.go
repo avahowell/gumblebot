@@ -82,6 +82,13 @@ func main() {
 				}
 				client.Send(&textmessage)
 			})
+		parser.RegisterCommand("play", "plays a sound from the soundboard",
+			func(args []string, sender *gumble.User) {
+				if len(args) < 1 {
+					return
+				}
+				go soundboard.Play(client, stream, args[0])
+			})
 		gumbleclient = client
 	}, gumbleutil.Listener{
 		Connect: func(e *gumble.ConnectEvent) {
@@ -94,13 +101,12 @@ func main() {
 				return
 			}
 			parser.Parse(e.Message, e.Sender)
-			soundboard.Play(gumbleclient, stream, e.Message)
 		},
 		UserChange: func(e *gumble.UserChangeEvent) {
 			soundboard.UpdateUsers(gumbleclient)
 			soundboard.SaveUsers(datafile)
 			if e.Type.Has(gumble.UserChangeConnected) == true {
-				soundboard.WelcomeUser(e.User, gumbleclient, stream)
+				go soundboard.WelcomeUser(e.User, gumbleclient, stream)
 			}
 		},
 	})

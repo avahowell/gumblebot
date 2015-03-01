@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 type SoundboardUser struct {
@@ -75,7 +76,9 @@ func (s *Soundboard) WelcomeUser(user *gumble.User, client *gumble.Client, strea
 			vtarget := &gumble.VoiceTarget{}
 			vtarget.ID = 1
 			vtarget.AddUser(user)
-			stream.Stop()
+			for stream.IsPlaying() {
+				time.Sleep(50 * time.Millisecond)
+			}
 			client.Send(vtarget)
 			client.VoiceTarget = vtarget
 			stream.Play(s.Users[user.Name].WelcomeSound)
@@ -95,8 +98,8 @@ func (s *Soundboard) SetWelcomeSound(username string, sound string) {
 	}
 }
 func (s *Soundboard) Play(client *gumble.Client, stream *gumble_ffmpeg.Stream, sound string) {
-	for key, value := range s.sounds {
-		if strings.Index(key, sound) == 0 {
+	for soundname, soundpath := range s.sounds {
+		if strings.Index(soundname, sound) == 0 {
 			vtarget := &gumble.VoiceTarget{}
 			vtarget.ID = 1
 			for username, sb := range s.Users {
@@ -108,8 +111,7 @@ func (s *Soundboard) Play(client *gumble.Client, stream *gumble_ffmpeg.Stream, s
 			stream.Stop()
 			client.Send(vtarget)
 			client.VoiceTarget = vtarget
-			stream.Play(value)
-			return
+			stream.Play(soundpath)
 		}
 	}
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"bytes"
 	"github.com/layeh/gumble/gumble"
 	"html/template"
@@ -37,6 +38,7 @@ type Command struct {
 type MessageParser struct {
 	Commands    map[string]*Command
 	Expressions []*Expression
+
 
 	usagetemplate *template.Template
 }
@@ -80,6 +82,7 @@ func (m *MessageParser) RegisterExpression(exp string, description string, actio
 func (m *MessageParser) Parse(message string, sender *gumble.User) {
 	argv := strings.Split(message, " ")
 
+	fmt.Println(argv)
 	for _, expression := range m.Expressions {
 		exp, _ := regexp.Compile(expression.Value)
 		for _, chunk := range argv {
@@ -90,7 +93,7 @@ func (m *MessageParser) Parse(message string, sender *gumble.User) {
 		}
 	}
 	for commandkey, command := range m.Commands {
-		if strings.Index(commandkey, argv[0]) == 0 {
+		if commandkey == argv[0] {
 			command.Action(argv[1:len(argv)], sender)
 		}
 	}
