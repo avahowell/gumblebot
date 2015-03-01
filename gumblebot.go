@@ -6,16 +6,16 @@ import (
 	"github.com/layeh/gumble/gumble"
 	"github.com/layeh/gumble/gumble_ffmpeg"
 	"github.com/layeh/gumble/gumbleutil"
-	"regexp"
 	"strings"
 )
 
-const datafile = "data"
-const usersfile = "users"
-const rootuser = "fighterjet"
-const UserChangeConnected = 1 << iota
-const maxthumbwidth = 200
-const image_regex = `[>]https?://.*.(png|jpg|gif|jpeg)([?\s\S]+)?[<]`
+const (
+	datafile      = "data"
+	usersfile     = "users"
+	rootuser      = "fighterjet"
+	maxthumbwidth = 200
+	image_regex   = `[>]https?://.*.(png|jpg|gif|jpeg)([?\s\S]+)?[<]`
+)
 
 func main() {
 	var sounds_dir = flag.String("sounds", "sounds", "directory where soundboard files are located")
@@ -30,10 +30,48 @@ func main() {
 	soundboard.LoadSounds(*sounds_dir)
 	admin.LoadAdminData(usersfile)
 	admin.RegisterUser(rootuser, GumblebotAdminRoot)
+	var parser MessageParser
+	parser.New()
+
 	gumbleutil.Main(func(client *gumble.Client) {
 		stream, _ = gumble_ffmpeg.New(client)
 		stream.Volume = float32(*volume)
 		client.Attach(gumbleutil.AutoBitrate)
+		parser.RegisterExpression(image_regex, "Image Thumbnailing",
+			func(match string) {
+				trimmed := strings.Trim(match, ">")
+				trimmed = strings.Trim(trimmed, "<")
+				var thumb MumbleThumbnail
+				thumb.MaxWidth = maxthumbwidth
+				go thumb.DownloadAndPost(trimmed, gumbleclient)
+			})
+		parser.RegisterCommand("stop", "soundboard stop",
+			func(args []string, sender *gumble.User) {
+				stream.Stop()
+			})
+		// TODO parser usage methods, for now just print a static usage template from SendUsage
+		parser.RegisterCommand("help", "bot usage command", func(args []string, sender *gumble.User) { go SendUsage(client, soundboard.sounds) })
+		parser.RegisterCommand("welcome", "welcome sound",
+			func(args []string, sender *gumble.User) {
+				soundboard.SetWelcomeSound(sender.Name, args[0])
+				soundboard.SaveUsers(datafile)
+			})
+		parser.RegisterCommand("sbon", "turns soundboard on",
+			func(args []string, sender *gumble.User) {
+				u := soundboard.Users[sender.Name]
+				u.SoundboardEnabled = true
+				soundboard.Users[sender.Name] = u
+			})
+		parser.RegisterCommand("sboff", "turns soundboard off",
+			func(args []string, sender *gumble.User) {
+				u := soundboard.Users[sender.Name]
+				u.SoundboardEnabled = false
+				soundboard.Users[sender.Name] = u
+			})
+		parser.RegisterCommand("whois", "prints admin information about user",
+			func(args []string, sender *gumble.User) {
+				admin.Whois(sender, args[0], client)
+			})
 		gumbleclient = client
 	}, gumbleutil.Listener{
 		Connect: func(e *gumble.ConnectEvent) {
@@ -45,58 +83,13 @@ func main() {
 			if e.Sender == nil {
 				return
 			}
-			imageregex, err := regexp.Compile(image_regex)
-			if err != nil {
-				panic(err)
-			}
-			if imageregex.MatchString(e.Message) == true {
-				untrimmed := imageregex.FindString(e.Message)
-				trimmed := strings.Trim(untrimmed, ">")
-				trimmed = strings.Trim(trimmed, "<")
-				var thumb MumbleThumbnail
-				thumb.MaxWidth = maxthumbwidth
-				go thumb.DownloadAndPost(trimmed, gumbleclient)
-				return
-			}
-			if e.Message == "stop" {
-				stream.Stop()
-				return
-			}
-			if e.Message == "help" {
-				go SendUsage(gumbleclient, soundboard.sounds)
-				return
-			}
-			separated_commands := strings.Split(e.Message, " ")
-			if separated_commands[0] == "welcome" {
-				if len(separated_commands) == 2 {
-					soundboard.SetWelcomeSound(e.Sender.Name, separated_commands[1])
-					soundboard.SaveUsers(datafile)
-				}
-				return
-			}
-			if e.Message == "sboff" {
-				u := soundboard.Users[e.Sender.Name]
-				u.SoundboardEnabled = false
-				soundboard.Users[e.Sender.Name] = u
-				soundboard.SaveUsers(datafile)
-				return
-			}
-			if e.Message == "sbon" {
-				u := soundboard.Users[e.Sender.Name]
-				u.SoundboardEnabled = true
-				soundboard.Users[e.Sender.Name] = u
-				soundboard.SaveUsers(datafile)
-				return
-			}
-			if separated_commands[0] == "whois" {
-				admin.Whois(e.Sender, separated_commands[1], gumbleclient)
-			}
+			parser.Parse(e.Message, e.Sender)
 			soundboard.Play(gumbleclient, stream, e.Message)
 		},
 		UserChange: func(e *gumble.UserChangeEvent) {
 			soundboard.UpdateUsers(gumbleclient)
 			soundboard.SaveUsers(datafile)
-			if e.Type.Has(UserChangeConnected) == true {
+			if e.Type.Has(gumble.UserChangeConnected) == true {
 				soundboard.WelcomeUser(e.User, gumbleclient, stream)
 			}
 		},
