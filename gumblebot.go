@@ -72,6 +72,16 @@ func main() {
 			func(args []string, sender *gumble.User) {
 				admin.Whois(sender, args[0], client)
 			})
+		parser.RegisterCommand("help", "prints usage",
+			func(args []string, sender *gumble.User) {
+				textmessage := gumble.TextMessage{
+					Channels: []*gumble.Channel{
+						sender.Channel,
+					},
+					Message: parser.Usage(),
+				}
+				client.Send(&textmessage)
+			})
 		gumbleclient = client
 	}, gumbleutil.Listener{
 		Connect: func(e *gumble.ConnectEvent) {
