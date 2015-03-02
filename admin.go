@@ -11,9 +11,9 @@ import (
 )
 
 const (
-	GumblebotRoot      = 2
-	GumblebotModerator = 1
-	GumblebotUser      = 0
+	GumblebotRoot      = "root"
+	GumblebotModerator = "moderator"
+	GumblebotUser      = "user"
 
 	permissiondenied = "I'm sorry dave, I can't do that."
 	whoistemplate = `
@@ -25,19 +25,26 @@ const (
 
 type AdminUser struct {
 	UserName    string
-	AccessLevel uint
+	MoveAllowed bool
+	KickAllowed bool
+	BanAllowed  bool
+	RegisterAllowed bool
+	AccessLevel string
 }
 
 type MumbleAdmin struct {
-	Users map[string]AdminUser
+	Users map[string]*AdminUser
+	Client *gumble.Client
 }
 type WhoisContext struct {
 	Name        string
 	AccessLevel string
 }
-
+func (m *MumbleAdmin) Attach(client *gumble.Client) {
+	m.Client = client
+}
 func (m *MumbleAdmin) LoadAdminData(datapath string) {
-	m.Users = make(map[string]AdminUser)
+	m.Users = make(map[string]*AdminUser)
 	iobuffer, err := ioutil.ReadFile(datapath)
 	if err != nil {
 		fmt.Println(err)
@@ -62,25 +69,32 @@ func (m *MumbleAdmin) SaveAdminData(datapath string) {
 		panic(err)
 	}
 }
-func (m *MumbleAdmin) RegisterUser(user string, accesslevel uint) {
-	m.Users[user] = AdminUser{UserName: user, AccessLevel: accesslevel}
+func (m *MumbleAdmin) RegisterUser(user string, accesslevel string) {
+	switch accesslevel {
+	case GumblebotRoot:
+		m.Users[user] = &AdminUser{UserName: user, MoveAllowed: true, KickAllowed: true, BanAllowed: true, RegisterAllowed: true, AccessLevel: accesslevel}
+	case GumblebotModerator:
+		m.Users[user] = &AdminUser{UserName: user, MoveAllowed: true, KickAllowed: true, BanAllowed: true, RegisterAllowed: false, AccessLevel: accesslevel}
+	case GumblebotUser:
+		m.Users[user] = &AdminUser{UserName: user, MoveAllowed: false, KickAllowed: false, BanAllowed: false, RegisterAllowed: false, AccessLevel: accesslevel}
+	}
 }
-func search_mumble_users_substring(target string, client *gumble.Client) *gumble.User {
-	for _, user := range client.Users {
+func (m *MumbleAdmin) search_mumble_users_substring(target string) *gumble.User {
+	for _, user := range m.Client.Users {
 		if strings.Index(strings.ToLower(user.Name), strings.ToLower(target)) == 0 {
 			return user
 		}
 	}
 	return nil
 }
-func (m *MumbleAdmin) Move (sender *gumble.User, client *gumble.Client, channelsubstring string, users []string) {
+func (m *MumbleAdmin) Move (sender *gumble.User, channelsubstring string, users []string) {
 	if user, ok := m.Users[sender.Name]; ok {
-		if user.AccessLevel < GumblebotModerator {
-			SendMumbleMessage(permissiondenied, client, client.Self.Channel)
+		if user.MoveAllowed != true {
+			SendMumbleMessage(permissiondenied, m.Client, m.Client.Self.Channel)
 			return
 		}
 		var targetChannel *gumble.Channel
-		for _, channel := range client.Channels {
+		for _, channel := range m.Client.Channels {
 			channelname := strings.ToLower(channel.Name)
 			if strings.Index(channelname, strings.ToLower(channelsubstring)) == 0 {
 				targetChannel = channel
@@ -88,59 +102,51 @@ func (m *MumbleAdmin) Move (sender *gumble.User, client *gumble.Client, channels
 		}
 		if targetChannel == nil {
 			nochanerr := fmt.Sprintf("No such channel: %s", channelsubstring)
-			SendMumbleMessage(nochanerr, client, client.Self.Channel)
+			SendMumbleMessage(nochanerr, m.Client, m.Client.Self.Channel)
 			return
 		}
 		for _, targetusersubstring := range users {
-			targetuser := search_mumble_users_substring(targetusersubstring, client)
+			targetuser := m.search_mumble_users_substring(targetusersubstring)
 			if targetuser == nil {
 				nousererr := fmt.Sprintf("No such user: %s", targetusersubstring)
-				SendMumbleMessage(nousererr, client, client.Self.Channel)
+				SendMumbleMessage(nousererr, m.Client, m.Client.Self.Channel)
 				return
 			}
 			targetuser.Move(targetChannel)
 		}
 	}
 }
-func (m *MumbleAdmin) Whois(sender *gumble.User, targetusername string, client *gumble.Client) {
-	if user, ok := m.Users[sender.Name]; ok {
-		if user.AccessLevel >= GumblebotUser {
-			targetuser := search_mumble_users_substring(targetusername, client)
-			if targetuser == nil {
-				// no such user, return!
-				return
-			}
-			var accessLevel string
-			if targetadmin, ok := m.Users[targetuser.Name]; ok {
-				switch targetadmin.AccessLevel {
-				case GumblebotRoot:
-					accessLevel = "Root Administrator"
-				case GumblebotModerator:
-					accessLevel = "Mumble Moderator"
-				case GumblebotUser:
-					accessLevel = "Mumble User"
-				}
-			} else {
+func (m *MumbleAdmin) Whois(sender *gumble.User, targetusername string) {
+	if _, ok := m.Users[sender.Name]; ok {
+		targetuser := m.search_mumble_users_substring(targetusername)
+		if targetuser == nil {
+			// no such user, return!
+			return
+		}
+		var accessLevel string
+		if targetadmin, ok := m.Users[targetuser.Name]; ok {
+			switch targetadmin.AccessLevel {
+			case GumblebotRoot:
+				accessLevel = "Root Administrator"
+			case GumblebotModerator:
+				accessLevel = "Mumble Moderator"
+			case GumblebotUser:
 				accessLevel = "Mumble User"
 			}
-
-			var buffer bytes.Buffer
-			template, err := template.New("whois").Parse(whoistemplate)
-			if err != nil {
-				panic(err)
-			}
-			err = template.Execute(&buffer, WhoisContext{targetuser.Name, accessLevel})
-
-			if err != nil {
-				panic(err)
-			}
-			message := gumble.TextMessage{
-				Channels: []*gumble.Channel{
-					client.Self.Channel,
-				},
-				Message: buffer.String(),
-			}
-			client.Send(&message)
+		} else {
+			accessLevel = "Mumble User"
 		}
+
+		var buffer bytes.Buffer
+		template, err := template.New("whois").Parse(whoistemplate)
+		if err != nil {
+			panic(err)
+		}
+		err = template.Execute(&buffer, WhoisContext{targetuser.Name, accessLevel})
+
+		if err != nil {
+			panic(err)
+		}
+		SendMumbleMessage(buffer.String(), m.Client, m.Client.Self.Channel)
 	}
 }
