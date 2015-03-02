@@ -16,7 +16,7 @@ const (
 	GumblebotUser      = "user"
 
 	permissiondenied = "I'm sorry dave, I can't do that."
-	whoistemplate = `
+	whoistemplate    = `
 		<br></br><b> Whois {{ .Name }} </b>
 		<ul>
 			<li>{{.AccessLevel}} </li>
@@ -24,22 +24,23 @@ const (
 )
 
 type AdminUser struct {
-	UserName    string
-	MoveAllowed bool
-	KickAllowed bool
-	BanAllowed  bool
+	UserName        string
+	MoveAllowed     bool
+	KickAllowed     bool
+	BanAllowed      bool
 	RegisterAllowed bool
-	AccessLevel string
+	AccessLevel     string
 }
 
 type MumbleAdmin struct {
-	Users map[string]*AdminUser
+	Users  map[string]*AdminUser
 	Client *gumble.Client
 }
 type WhoisContext struct {
 	Name        string
 	AccessLevel string
 }
+
 func (m *MumbleAdmin) Attach(client *gumble.Client) {
 	m.Client = client
 }
@@ -87,7 +88,7 @@ func (m *MumbleAdmin) search_mumble_users_substring(target string) *gumble.User 
 	}
 	return nil
 }
-func (m *MumbleAdmin) Move (sender *gumble.User, channelsubstring string, users []string) {
+func (m *MumbleAdmin) Move(sender *gumble.User, channelsubstring string, users []string) {
 	if user, ok := m.Users[sender.Name]; ok {
 		if user.MoveAllowed != true {
 			SendMumbleMessage(permissiondenied, m.Client, m.Client.Self.Channel)
@@ -116,6 +117,15 @@ func (m *MumbleAdmin) Move (sender *gumble.User, channelsubstring string, users 
 		}
 	}
 }
+func (m *MumbleAdmin) Poke(sender *gumble.User, targetusername string) {
+	targetuser := m.search_mumble_users_substring(targetusername)
+	if targetuser != nil {
+		SendMumbleMessageTo(targetuser, fmt.Sprintf("%s poked you!", sender.Name), m.Client)
+	} else {
+		SendMumbleMessage(fmt.Sprintf("%s not found!", targetusername), m.Client, m.Client.Self.Channel)
+	}
+}
+
 func (m *MumbleAdmin) Whois(sender *gumble.User, targetusername string) {
 	if _, ok := m.Users[sender.Name]; ok {
 		targetuser := m.search_mumble_users_substring(targetusername)

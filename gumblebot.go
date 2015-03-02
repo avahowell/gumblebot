@@ -77,21 +77,14 @@ func main() {
 			func(args []string, sender *gumble.User) {
 				admin.Whois(sender, args[0])
 			})
-	//	parser.RegisterCommand("poke", "pokes a user",
-	//		func(args []string, sender *gumble.User) {
-			/*	if len(args) < 1 {
+		parser.RegisterCommand("poke", "pokes a user",
+			func(args []string, sender *gumble.User) {
+				if len(args) < 1 {
 					SendMumbleMessage(parser.Commands["poke"].Usage, client, client.Self.Channel)
 					return
 				}
-				pokestring := fmt.Sprintf("%s poked you!", sender.Name)
-				targetuser := search_mumble_users_substring(args[0], client)
-				if targetuser != nil {
-					SendMumbleMessageTo(targetuser, pokestring, client)
-				} else {
-					notfound := fmt.Sprintf("%s not found!", args[0])
-					SendMumbleMessage(notfound, client, client.Self.Channel)
-				}
-			}) */
+				admin.Poke(sender, args[0])
+			})
 		parser.RegisterCommand("sbusers", "prints soundboard users",
 			func(args []string, sender *gumble.User) {
 				// TODO
@@ -164,7 +157,7 @@ func main() {
 			}
 			parser.Parse(e.Message, e.Sender)
 		},
-		PermissionDenied: func (e *gumble.PermissionDeniedEvent) {
+		PermissionDenied: func(e *gumble.PermissionDeniedEvent) {
 			fmt.Println(e)
 		},
 		UserChange: func(e *gumble.UserChangeEvent) {
