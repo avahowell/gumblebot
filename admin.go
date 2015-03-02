@@ -67,13 +67,41 @@ func (m *MumbleAdmin) RegisterUser(user string, accesslevel uint) {
 }
 func search_mumble_users_substring(target string, client *gumble.Client) *gumble.User {
 	for _, user := range client.Users {
-		if strings.Index(user.Name, target) == 0 {
+		if strings.Index(strings.ToLower(user.Name), strings.ToLower(target)) == 0 {
 			return user
 		}
 	}
 	return nil
 }
-
+func (m *MumbleAdmin) Move (sender *gumble.User, client *gumble.Client, channelsubstring string, users []string) {
+	if user, ok := m.Users[sender.Name]; ok {
+		if user.AccessLevel < GumblebotModerator {
+			SendMumbleMessage(permissiondenied, client, client.Self.Channel)
+			return
+		}
+		var targetChannel *gumble.Channel
+		for _, channel := range client.Channels {
+			channelname := strings.ToLower(channel.Name)
+			if strings.Index(channelname, strings.ToLower(channelsubstring)) == 0 {
+				targetChannel = channel
+			}
+		}
+		if targetChannel == nil {
+			nochanerr := fmt.Sprintf("No such channel: %s", channelsubstring)
+			SendMumbleMessage(nochanerr, client, client.Self.Channel)
+			return
+		}
+		for _, targetusersubstring := range users {
+			targetuser := search_mumble_users_substring(targetusersubstring, client)
+			if targetuser == nil {
+				nousererr := fmt.Sprintf("No such user: %s", targetusersubstring)
+				SendMumbleMessage(nousererr, client, client.Self.Channel)
+				return
+			}
+			targetuser.Move(targetChannel)
+		}
+	}
+}
 func (m *MumbleAdmin) Whois(sender *gumble.User, targetusername string, client *gumble.Client) {
 	if user, ok := m.Users[sender.Name]; ok {
 		if user.AccessLevel >= GumblebotUser {

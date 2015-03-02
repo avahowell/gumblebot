@@ -53,6 +53,10 @@ func main() {
 		parser.RegisterCommand("help", "bot usage command", func(args []string, sender *gumble.User) { go SendUsage(client, soundboard.sounds) })
 		parser.RegisterCommand("welcome", "welcome sound",
 			func(args []string, sender *gumble.User) {
+				if len(args) < 1 {
+					SendMumbleMessage(parser.Commands["welcome"].Usage, client, client.Self.Channel)
+					return
+				}
 				soundboard.SetWelcomeSound(sender.Name, args[0])
 				soundboard.SaveUsers(datafile)
 			})
@@ -91,7 +95,15 @@ func main() {
 			func(args []string, sender *gumble.User) {
 				// TODO
 			})
-		parser.RegisterCommand("register", "register [user] [(user, moderator, root)] registers a user as one of the followingL user, moderator, root",
+		parser.RegisterCommand("move", "move [users...] [channel]",
+			func(args []string, sender *gumble.User) {
+				if len(args) < 2 {
+					SendMumbleMessage(parser.Commands["move"].Usage, client, client.Self.Channel)
+					return
+				}
+				admin.Move(sender, client, args[len(args)-1], args[:len(args)-1])
+			})
+		parser.RegisterCommand("register", "register [user] [(user, moderator, root)] registers a user as one of the following user, moderator, root",
 			func(args []string, sender *gumble.User) {
 				if sender_admin, ok := admin.Users[sender.Name]; ok {
 					if sender_admin.AccessLevel >= GumblebotRoot {
@@ -148,6 +160,9 @@ func main() {
 				return
 			}
 			parser.Parse(e.Message, e.Sender)
+		},
+		PermissionDenied: func (e *gumble.PermissionDeniedEvent) {
+			fmt.Println(e)
 		},
 		UserChange: func(e *gumble.UserChangeEvent) {
 			soundboard.UpdateUsers(gumbleclient)
