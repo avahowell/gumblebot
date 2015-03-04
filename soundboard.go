@@ -38,6 +38,7 @@ func (s *Soundboard) LoadSounds(path string) {
 	}
 }
 func (s *Soundboard) LoadUsers(datapath string) {
+	s.Users = make(map[string]SoundboardUser)
 	iobuffer, err := ioutil.ReadFile(datapath)
 	if err != nil {
 		fmt.Println(err)
