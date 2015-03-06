@@ -16,11 +16,7 @@ const (
 	GumblebotUser      = "user"
 
 	permissiondenied = "I'm sorry dave, I can't do that."
-	whoistemplate    = `
-		<br></br><b> Whois {{ .Name }} </b>
-		<ul>
-			<li>{{.AccessLevel}} </li>
-		<ul>`
+	whoishtml        = "templates/whois.html"
 )
 
 type AdminUser struct {
@@ -117,6 +113,35 @@ func (m *MumbleAdmin) Move(sender *gumble.User, channelsubstring string, users [
 		}
 	}
 }
+func (m *MumbleAdmin) Kick(sender *gumble.User, targetusername string, reason string) {
+	if user, ok := m.Users[sender.Name]; !ok || !user.KickAllowed {
+		SendMumbleMessage(permissiondenied, m.Client, m.Client.Self.Channel)
+		return
+	}
+	targetuser := m.search_mumble_users_substring(targetusername)
+	if targetuser == nil {
+		SendMumbleMessage(fmt.Sprintf("No such user matching %s", targetusername), m.Client, m.Client.Self.Channel)
+		return
+	}
+	targetuser.Kick(reason)
+}
+func (m *MumbleAdmin) Ban(sender *gumble.User, targetusername string, reason string) {
+	if user, ok := m.Users[sender.Name]; !ok || !user.BanAllowed {
+		SendMumbleMessage(permissiondenied, m.Client, m.Client.Self.Channel)
+		return
+	}
+	targetuser := m.search_mumble_users_substring(targetusername)
+	if targetuser == nil {
+		SendMumbleMessage(fmt.Sprintf("No such user matching %s", targetusername), m.Client, m.Client.Self.Channel)
+		return
+	}
+	targetadminuser, _ := m.Users[targetuser.Name]
+	if targetadminuser.AccessLevel == GumblebotRoot || targetadminuser.AccessLevel == GumblebotModerator {
+		SendMumbleMessage("You can't ban a gumblebot moderator!", m.Client, m.Client.Self.Channel)
+		return
+	}
+	targetuser.Ban(reason)
+}
 func (m *MumbleAdmin) Poke(sender *gumble.User, targetusername string) {
 	targetuser := m.search_mumble_users_substring(targetusername)
 	if targetuser != nil {
@@ -148,7 +173,7 @@ func (m *MumbleAdmin) Whois(sender *gumble.User, targetusername string) {
 		}
 
 		var buffer bytes.Buffer
-		template, err := template.New("whois").Parse(whoistemplate)
+		template, err := template.ParseFiles(whoishtml)
 		if err != nil {
 			panic(err)
 		}

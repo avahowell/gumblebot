@@ -10,19 +10,7 @@ import (
 )
 
 const (
-	defaultUsageTemplate = `
-	<b> Gumblebot Usage </b>
-		<ul> Commands
-			{{ range $commandkey, $command := .Commands }}
-			<li>{{$command.Value}}: {{$command.Usage}}</li>
-			{{ end }}
- 		</ul>
-		<ul> Active Expressions
-			{{ range .Expressions }} 
-			<li> {{.Description}} </li>
-			{{ end }}
-		</ul>	
-	`
+	usagehtml = "templates/usage.html"
 )
 
 type Expression struct {
@@ -45,18 +33,10 @@ type MessageParser struct {
 func (m *MessageParser) New() {
 	m.Commands = make(map[string]*Command)
 	var err error
-	m.usagetemplate, err = template.New("default").Parse(defaultUsageTemplate)
+	m.usagetemplate, err = template.ParseFiles(usagehtml)
 	if err != nil {
 		panic(err)
 	}
-}
-func (m *MessageParser) LoadUsageTemplate(templatetext string) error {
-	var err error
-	m.usagetemplate, err = template.New("templatetest").Parse(templatetext)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 func (m *MessageParser) Usage() string {
 	var buffer bytes.Buffer

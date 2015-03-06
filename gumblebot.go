@@ -50,7 +50,6 @@ func main() {
 			func(args []string, sender *gumble.User) {
 				stream.Stop()
 			})
-		// TODO parser usage methods, for now just print a static usage template from SendUsage
 		parser.RegisterCommand("help", "bot usage command", func(args []string, sender *gumble.User) { go SendUsage(client, soundboard.sounds) })
 		parser.RegisterCommand("welcome", "welcome sound",
 			func(args []string, sender *gumble.User) {
@@ -96,6 +95,22 @@ func main() {
 					return
 				}
 				admin.Move(sender, args[len(args)-1], args[:len(args)-1])
+			})
+		parser.RegisterCommand("kick", "kick [user] [reason]",
+			func(args []string, sender *gumble.User) {
+				if len(args) < 2 {
+					SendMumbleMessage(parser.Commands["kick"].Usage, client, client.Self.Channel)
+					return
+				}
+				admin.Kick(sender, args[0], args[1])
+			})
+		parser.RegisterCommand("ban", "ban [user] [reason]",
+			func(args []string, sender *gumble.User) {
+				if len(args) <2 {
+					SendMumbleMessage(parser.Commands["ban"].Usage, client, client.Self.Channel)
+					return
+				}
+				admin.Ban(sender, args[0], args[1])
 			})
 		parser.RegisterCommand("register", "register [user] [(user, moderator, root)] registers a user as one of the following user, moderator, root",
 			func(args []string, sender *gumble.User) {
@@ -161,6 +176,7 @@ func main() {
 			fmt.Println(e)
 		},
 		UserChange: func(e *gumble.UserChangeEvent) {
+			admin
 			soundboard.UpdateUsers(gumbleclient)
 			soundboard.SaveUsers(datafile)
 			if e.Type.Has(gumble.UserChangeConnected) == true {

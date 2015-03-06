@@ -1,0 +1,12 @@
+<b> Gumblebot (Go-Mumble-Bot) Usage </b>
+<ul> Commands
+	{{ range $commandkey, $command := .Commands }}
+	<li>{{$command.Value}}: {{$command.Usage}}</li>
+	{{ end }}
+</ul>
+<ul> Active Expressions
+	{{ range .Expressions }}
+	<li> {{.Description}} </li>
+	{{ end }}
+</ul>
+
