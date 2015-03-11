@@ -12,7 +12,6 @@ import (
 const (
 	datafile      = "data"
 	usersfile     = "users"
-	rootuser      = "fighterjet"
 	maxthumbwidth = 200
 	image_regex   = `[>]https?://.*.(png|jpg|gif|jpeg)([?\s\S]+)?[<]`
 )
@@ -20,6 +19,7 @@ const (
 func main() {
 	var sounds_dir = flag.String("sounds", "sounds", "directory where soundboard files are located")
 	var volume = flag.Float64("volume", 0.25, "soundboard volume from 0 to 1")
+	var rootuser = flag.String("root", "fighterjet", "the root user for the gumblebot admin subsystem")
 	var stream *gumble_ffmpeg.Stream
 
 	var soundboard Soundboard
@@ -29,7 +29,7 @@ func main() {
 	soundboard.LoadUsers(datafile)
 	soundboard.LoadSounds(*sounds_dir)
 	admin.LoadAdminData(usersfile)
-	admin.RegisterUser(rootuser, GumblebotRoot)
+	admin.RegisterUser(*rootuser, GumblebotRoot)
 	var parser MessageParser
 	parser.New()
 
