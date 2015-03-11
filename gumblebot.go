@@ -50,7 +50,6 @@ func main() {
 			func(args []string, sender *gumble.User) {
 				stream.Stop()
 			})
-		parser.RegisterCommand("help", "bot usage command", func(args []string, sender *gumble.User) { go SendUsage(client, soundboard.sounds) })
 		parser.RegisterCommand("welcome", "welcome sound",
 			func(args []string, sender *gumble.User) {
 				if len(args) < 1 {
@@ -176,7 +175,6 @@ func main() {
 			fmt.Println(e)
 		},
 		UserChange: func(e *gumble.UserChangeEvent) {
-			admin
 			soundboard.UpdateUsers(gumbleclient)
 			soundboard.SaveUsers(datafile)
 			if e.Type.Has(gumble.UserChangeConnected) == true {
